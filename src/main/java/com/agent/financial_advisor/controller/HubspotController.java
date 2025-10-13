@@ -61,7 +61,7 @@ public class HubspotController {
         String hubspotAuthUrl = String.format(
                 "https://app-na2.hubspot.com/oauth/authorize?client_id=%s&redirect_uri=%s&scope=%s",
                 clientId,
-                redirectUri,  // This should be http://localhost:8080/api/hubspot/callback
+                redirectUri,
                 scopeString
         );
 
@@ -149,7 +149,7 @@ public class HubspotController {
             if (user != null) {
                 log.info("Updating HubSpot tokens for user: {}", email);
                 userService.updateHubspotTokens(user, accessToken, refreshToken);
-                log.info("✅ HubSpot tokens saved successfully!");
+                log.info("HubSpot tokens saved successfully!");
             } else {
                 log.warn("User not found with email: {}", email);
                 return new RedirectView("/chat-page?error=user_not_found");

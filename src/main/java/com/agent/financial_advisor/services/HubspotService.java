@@ -11,6 +11,7 @@ import lombok.RequiredArgsConstructor;
 import okhttp3.*;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
+
 import java.io.IOException;
 import java.time.Instant;
 import java.util.*;
@@ -35,6 +36,7 @@ public class HubspotService {
     public HubspotService(UserRepository userRepository) {
         this.userRepository = userRepository;
     }
+
     public List<JsonNode> getAllContacts(User user) throws IOException {
         List<JsonNode> allContacts = new ArrayList<>();
         String after = null;
@@ -412,6 +414,7 @@ public class HubspotService {
             throw new RuntimeException("Error fetching contacts", e);
         }
     }
+
     private String processResponse(Response response, List<JsonNode> allContacts) throws IOException {
         String responseBody = response.body().string();
         JsonNode root = objectMapper.readTree(responseBody);

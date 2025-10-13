@@ -1,7 +1,6 @@
 package com.agent.financial_advisor.model;
 
 
-
 import jakarta.persistence.*;
 import lombok.Data;
 

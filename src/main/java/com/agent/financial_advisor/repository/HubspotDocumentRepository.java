@@ -5,10 +5,11 @@ import com.agent.financial_advisor.model.User;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.data.jpa.repository.Query;
 import org.springframework.data.repository.query.Param;
+
 import java.util.List;
 import java.util.Optional;
 
-public interface HubspotDocumentRepository extends JpaRepository<HubspotDocument, Long>{
+public interface HubspotDocumentRepository extends JpaRepository<HubspotDocument, Long> {
 
     Optional<HubspotDocument> findByUserAndHubspotContactId(User user, String hubspotContactId);
 

@@ -8,5 +8,6 @@ import java.util.List;
 
 public interface MessageRepository extends JpaRepository<Message, Long> {
     List<Message> findByUserOrderByCreatedAtAsc(User user);
+
     List<Message> findTop20ByUserOrderByCreatedAtDesc(User user);
 }

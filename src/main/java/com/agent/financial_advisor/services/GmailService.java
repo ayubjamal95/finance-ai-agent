@@ -1,4 +1,5 @@
 package com.agent.financial_advisor.services;
+
 import com.agent.financial_advisor.model.User;
 import com.google.api.client.googleapis.javanet.GoogleNetHttpTransport;
 import com.google.api.client.http.javanet.NetHttpTransport;
@@ -14,6 +15,7 @@ import org.springframework.stereotype.Service;
 import java.io.IOException;
 import java.security.GeneralSecurityException;
 import java.util.*;
+
 @Service
 @RequiredArgsConstructor
 public class GmailService {

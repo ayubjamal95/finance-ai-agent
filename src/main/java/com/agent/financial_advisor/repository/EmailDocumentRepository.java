@@ -17,5 +17,6 @@ public interface EmailDocumentRepository extends JpaRepository<EmailDocument, Lo
                                     @Param("limit") int limit);
 
     List<EmailDocument> findByUserOrderByEmailDateDesc(User user);
+
     boolean existsByGmailMessageId(String gmailMessageId);
 }

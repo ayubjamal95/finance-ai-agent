@@ -13,6 +13,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.*;
+
 @Service
 public class AIAgentService {
     private final OpenAIService openAIService;
@@ -133,6 +134,7 @@ public class AIAgentService {
             this.end_date = end_date;
         }
     }
+
     public static class CalendarEventParams {
         private String title;
         private String description;
@@ -192,6 +194,7 @@ public class AIAgentService {
             this.email = email;
         }
     }
+
     public static class CreateContactParams {
         private String email;
         private String firstname;
