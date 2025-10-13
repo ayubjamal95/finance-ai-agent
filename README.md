@@ -43,7 +43,7 @@ Follow these steps to set up and run the application on your local machine.
 1.  **Clone the Repository**
     ```bash
     git clone <YOUR_REPOSITORY_URL>
-    cd financial-advisor
+    cd finance-ai-agent
     ```
 
 2.  **Build the Project**
