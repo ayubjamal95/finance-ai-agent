@@ -26,8 +26,7 @@ public class ChatController {
     @SendTo("/topic/messages")
     public ChatResponse handleChatMessage(
             ChatRequest request, Principal principal) {
-        String email ="anonymous";
-
+        String email = "anonymous";
 
 
         if (principal instanceof Authentication auth) {
@@ -41,8 +40,6 @@ public class ChatController {
         User user = userService.findByEmail(email);
 
         if (user == null) {
-            // It's cleaner to return an error response, though in a production app,
-            // you might throw an exception or handle authentication failure upstream.
             return new ChatResponse("Error: User not found!!!");
         }
 
@@ -51,7 +48,6 @@ public class ChatController {
     }
 
     // --- Inner Classes (DTOs) ---
-
 
     public static class ChatRequest {
         private String message;
@@ -65,14 +61,11 @@ public class ChatController {
         }
     }
 
-
-     // <-- This generates the public ChatResponse(String message) constructor
     public static class ChatResponse {
         public ChatResponse(final String message) {
             this.message = message;
         }
 
-        // We can make this field final for immutability in the response DTO
         private String message;
 
         public String getMessage() {

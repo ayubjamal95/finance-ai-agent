@@ -16,7 +16,6 @@ public class SecurityConfig {
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
 
-                        // ⭐ CRITICAL FIX: Explicitly permit this specific URI FIRST ⭐
                         // This guarantees the request bypasses Spring Security's internal OAuth filter.
                         .requestMatchers("/hubspot/callback").permitAll()
 
@@ -24,7 +23,6 @@ public class SecurityConfig {
                         .requestMatchers("/login", "/css/**", "/default-ui.css").permitAll()
 
                         // Apply the default rule to everything else
-                        // Note: Change this to .anyRequest().authenticated() once you remove the temporary bypass
                         .anyRequest().permitAll() // Retained your temporary setting
                 )
                 .oauth2Login(oauth2 -> oauth2

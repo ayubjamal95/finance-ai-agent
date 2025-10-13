@@ -13,7 +13,7 @@ import java.time.LocalDateTime;
 @Service
 @RequiredArgsConstructor
 public class UserService {
-   @Autowired
+    @Autowired
     UserRepository userRepository;
 
     @Transactional

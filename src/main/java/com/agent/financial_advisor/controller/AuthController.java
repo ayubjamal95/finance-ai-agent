@@ -45,7 +45,7 @@ public class AuthController {
                 : null;
 
         // Save or update user info with both tokens
-        User user =userService.getOrCreateUser(
+        User user = userService.getOrCreateUser(
                 oauth2User,
                 googleAccessToken,
                 googleRefreshToken
