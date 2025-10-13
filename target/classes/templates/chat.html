@@ -1,0 +1,222 @@
+<!DOCTYPE html>
+<html xmlns:th="http://www.thymeleaf.org">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AI Agent - Financial Advisor</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/sockjs-client/1.6.1/sockjs.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/stomp.js/2.3.3/stomp.min.js"></script>
+</head>
+<body class="bg-gray-50">
+<div class="flex h-screen">
+    <!-- Sidebar -->
+    <div class="w-64 bg-white border-r border-gray-200 flex flex-col">
+        <div class="p-4 border-b border-gray-200">
+            <h1 class="text-xl font-bold text-gray-900">AI Assistant</h1>
+            <p class="text-sm text-gray-600 mt-1" id="userEmail"></p>
+        </div>
+
+        <div class="flex-1 p-4 space-y-2">
+            <div class="space-y-2">
+                <div class="flex items-center gap-2 text-sm">
+                    <div id="googleStatus" class="w-2 h-2 rounded-full bg-gray-300"></div>
+                    <span class="text-gray-700">Gmail & Calendar</span>
+                </div>
+                <div class="flex items-center gap-2 text-sm">
+                    <div id="hubspotStatus" class="w-2 h-2 rounded-full bg-gray-300"></div>
+                    <span class="text-gray-700">HubSpot</span>
+                </div>
+            </div>
+
+            <button id="connectHubspot"
+                    class="mt-4 w-full bg-orange-500 text-white py-2 px-4 rounded-lg hover:bg-orange-600 transition-colors text-sm font-medium hidden">
+                Connect HubSpot
+            </button>
+
+            <button id="syncButton"
+                    class="mt-2 w-full bg-blue-500 text-white py-2 px-4 rounded-lg hover:bg-blue-600 transition-colors text-sm font-medium">
+                Sync Data
+            </button>
+        </div>
+
+        <div class="p-4 border-t border-gray-200">
+            <a href="/logout" class="text-sm text-red-600 hover:text-red-700">Sign Out</a>
+        </div>
+    </div>
+
+    <!-- Main Chat Area -->
+    <div class="flex-1 flex flex-col">
+        <!-- Chat Header -->
+        <div class="bg-white border-b border-gray-200 p-4">
+            <h2 class="text-lg font-semibold text-gray-900">Chat with your AI Assistant</h2>
+            <p class="text-sm text-gray-600 mt-1">Ask questions about clients, schedule meetings, manage contacts</p>
+        </div>
+
+        <!-- Messages Container -->
+        <div id="messagesContainer" class="flex-1 overflow-y-auto p-6 space-y-4">
+            <div class="flex gap-3">
+                <div class="flex-shrink-0 w-8 h-8 rounded-full bg-blue-500 flex items-center justify-center text-white font-medium">
+                    AI
+                </div>
+                <div class="flex-1 bg-white rounded-lg p-4 shadow-sm">
+                    <p class="text-gray-800">
+                        Hello! I'm your AI assistant. I can help you with:
+                        <br><br>
+                        • <strong>Find information</strong> - "Who mentioned their kid plays baseball?"
+                        <br>
+                        • <strong>Schedule meetings</strong> - "Schedule an appointment with Sara Smith"
+                        <br>
+                        • <strong>Manage contacts</strong> - "Create a HubSpot contact for john@example.com"
+                        <br>
+                        • <strong>Set ongoing instructions</strong> - "Whenever someone emails me who isn't in HubSpot, create a contact"
+                        <br><br>
+                        What would you like me to help you with?
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Input Area -->
+        <div class="bg-white border-t border-gray-200 p-4">
+            <form id="chatForm" class="flex gap-2">
+                <input type="text"
+                       id="messageInput"
+                       placeholder="Type your message..."
+                       class="flex-1 px-4 py-3 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-blue-500"
+                       autocomplete="off">
+                <button type="submit"
+                        class="bg-blue-500 text-white px-6 py-3 rounded-lg hover:bg-blue-600 transition-colors font-medium">
+                    Send
+                </button>
+            </form>
+            <p class="text-xs text-gray-500 mt-2">The AI has access to your emails, calendar, and HubSpot CRM</p>
+        </div>
+    </div>
+</div>
+
+<script>
+    let stompClient = null;
+    let userEmail = '';
+
+    // Check user status
+    fetch('/api/user/status')
+        .then(res => res.json())
+        .then(data => {
+            userEmail = data.email;
+            document.getElementById('userEmail').textContent = data.email;
+
+            if (data.googleConnected) {
+                document.getElementById('googleStatus').classList.remove('bg-gray-300');
+                document.getElementById('googleStatus').classList.add('bg-green-500');
+            }
+
+            if (data.hubspotConnected) {
+                document.getElementById('hubspotStatus').classList.remove('bg-gray-300');
+                document.getElementById('hubspotStatus').classList.add('bg-green-500');
+                document.getElementById('connectHubspot').classList.add('hidden');
+            } else {
+                document.getElementById('connectHubspot').classList.remove('hidden');
+            }
+        });
+
+    // Connect to WebSocket
+    function connect() {
+        const socket = new SockJS('/ws');
+        stompClient = Stomp.over(socket);
+        stompClient.connect({}, function(frame) {
+            console.log('Connected: ' + frame);
+            stompClient.subscribe('/topic/messages', function(message) {
+                showMessage(JSON.parse(message.body).message, false);
+            });
+        });
+    }
+
+    // Send message
+    document.getElementById('chatForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        const input = document.getElementById('messageInput');
+        const message = input.value.trim();
+
+        if (message) {
+            showMessage(message, true);
+
+            if (stompClient && stompClient.connected) {
+                stompClient.send("/app/chat", {}, JSON.stringify({message: message}));
+            } else {
+                // Fallback to HTTP if WebSocket not connected
+                fetch('/api/chat', {
+                    method: 'POST',
+                    headers: {'Content-Type': 'application/json'},
+                    body: JSON.stringify({message: message})
+                })
+                .then(res => res.json())
+                .then(data => showMessage(data.message, false));
+            }
+
+            input.value = '';
+        }
+    });
+
+    // Show message in chat
+    function showMessage(text, isUser) {
+        const container = document.getElementById('messagesContainer');
+        const messageDiv = document.createElement('div');
+        messageDiv.className = 'flex gap-3 ' + (isUser ? 'flex-row-reverse' : '');
+
+        const avatar = document.createElement('div');
+        avatar.className = 'flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center text-white font-medium';
+        avatar.style.backgroundColor = isUser ? '#10b981' : '#3b82f6';
+        avatar.textContent = isUser ? 'You' : 'AI';
+
+        const bubble = document.createElement('div');
+        bubble.className = 'flex-1 rounded-lg p-4 shadow-sm';
+        bubble.style.backgroundColor = isUser ? '#f3f4f6' : 'white';
+        bubble.innerHTML = '<p class="text-gray-800" style="white-space: pre-wrap;">' + escapeHtml(text) + '</p>';
+
+        messageDiv.appendChild(avatar);
+        messageDiv.appendChild(bubble);
+        container.appendChild(messageDiv);
+        container.scrollTop = container.scrollHeight;
+    }
+
+    function escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+
+    // Connect HubSpot
+    document.getElementById('connectHubspot').addEventListener('click', function() {
+        window.location.href = '/api/hubspot/connect';
+    });
+
+    // Sync data
+    document.getElementById('syncButton').addEventListener('click', function() {
+        const btn = this;
+        btn.disabled = true;
+        btn.textContent = 'Syncing...';
+
+        fetch('/api/sync', {method: 'POST'})
+            .then(res => res.json())
+            .then(data => {
+                btn.textContent = 'Sync Complete!';
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.textContent = 'Sync Data';
+                }, 2000);
+            })
+            .catch(err => {
+                btn.textContent = 'Sync Failed';
+                setTimeout(() => {
+                    btn.disabled = false;
+                    btn.textContent = 'Sync Data';
+                }, 2000);
+            });
+    });
+
+    // Initialize
+    connect();
+</script>
+</body>
+</html>
