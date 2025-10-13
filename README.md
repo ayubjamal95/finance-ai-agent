@@ -2,7 +2,7 @@
 
 ## ✨ Project Overview
 
-This repository contains the source code for the **Financial Advisor API**, a backend service built using **Spring Boot 3**.
+This repository contains the source code for the **Financial Advisor AI Agent**, a backend service built using **Spring Boot 3**.
 
 
 ### 🚀 Live Deployment (Render)
