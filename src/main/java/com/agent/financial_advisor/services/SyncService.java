@@ -23,7 +23,7 @@ public class SyncService {
         this.ragService = ragService;
     }
 
-    @Scheduled(fixedDelayString = "${app.sync.interval}")
+    @Scheduled(fixedDelay = 60000)
     public void syncAllUsers() {
         List<User> users = userRepository.findAll();
         for (User user : users) {

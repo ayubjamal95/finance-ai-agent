@@ -28,7 +28,6 @@ public class ChatController {
             ChatRequest request, Principal principal) {
         String email = "anonymous";
 
-
         if (principal instanceof Authentication auth) {
             Object userPrincipal = auth.getPrincipal();
 

@@ -12,23 +12,36 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-
                 .csrf(csrf -> csrf.disable())
                 .authorizeHttpRequests(auth -> auth
+                        // Public endpoints
+                        .requestMatchers("/login", "/css/**", "/default-ui.css", "/js/**", "/images/**").permitAll()
 
-                        // This guarantees the request bypasses Spring Security's internal OAuth filter.
+                        // HubSpot callback needs special handling - must be accessible but will check auth inside
                         .requestMatchers("/hubspot/callback").permitAll()
 
-                        // Your other public/private paths (can be adjusted later)
-                        .requestMatchers("/login", "/css/**", "/default-ui.css").permitAll()
+                        // Logout endpoint
+                        .requestMatchers("/logout").permitAll()
 
-                        // Apply the default rule to everything else
-                        .anyRequest().permitAll() // Retained your temporary setting
+                        // API endpoints require authentication
+                        .requestMatchers("/api/**").authenticated()
+
+                        // Chat page and websocket require authentication
+                        .requestMatchers("/chat-page", "/ws/**").authenticated()
+
+                        // Everything else requires authentication
+                        .anyRequest().authenticated()
                 )
                 .oauth2Login(oauth2 -> oauth2
-                        // This remains for Google OAuth flow
                         .defaultSuccessUrl("/chat-page", true)
                         .loginPage("/login")
+                        .failureUrl("/login?error=true")
+                )
+                .logout(logout -> logout
+                        .logoutUrl("/logout")
+                        .logoutSuccessUrl("/login?logout=true")
+                        .invalidateHttpSession(true)
+                        .deleteCookies("JSESSIONID")
                 );
 
         return http.build();

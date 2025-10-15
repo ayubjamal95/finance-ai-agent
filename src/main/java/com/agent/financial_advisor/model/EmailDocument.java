@@ -3,11 +3,10 @@ package com.agent.financial_advisor.model;
 import com.agent.financial_advisor.config.VectorType;
 import jakarta.persistence.*;
 import lombok.Data;
-
 import java.time.LocalDateTime;
-
 import com.pgvector.PGvector;
 import org.hibernate.annotations.Type;
+
 
 
 @Entity

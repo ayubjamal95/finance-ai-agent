@@ -18,6 +18,7 @@ import java.time.ZoneId;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
+import java.util.stream.StreamSupport;
 
 @Service
 public class RAGService {
@@ -115,6 +116,7 @@ public class RAGService {
         try {
             String contactId = contact.get("id").asText();
             JsonNode properties = contact.get("properties");
+            JsonNode notes = contact.get("notes");
 
             HubspotDocument doc = hubspotDocumentRepository
                     .findByUserAndHubspotContactId(user, contactId)
@@ -125,7 +127,15 @@ public class RAGService {
             doc.setFirstName(properties.has("firstname") ? properties.get("firstname").asText() : "");
             doc.setLastName(properties.has("lastname") ? properties.get("lastname").asText() : "");
             doc.setEmail(properties.has("email") ? properties.get("email").asText() : "");
-            doc.setNotes(properties.has("notes") ? properties.get("notes").asText() : "");
+            // join all note texts into one string, or store as JSON
+            if (notes != null && notes.isArray()) {
+                String allNotes = StreamSupport.stream(notes.spliterator(), false)
+                        .map(n -> n.get("hs_note_body").asText())
+                        .collect(Collectors.joining("\n---\n"));
+                doc.setNotes(allNotes);
+            } else {
+                doc.setNotes("");
+            }
             doc.setAllProperties(properties.toString());
 
             if (properties.has("lastmodifieddate")) {

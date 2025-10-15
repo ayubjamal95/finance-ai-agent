@@ -16,7 +16,6 @@ public class User {
 
     @Column(unique = true, nullable = false)
     private String email;
-
     private String name;
     @Column(length = 2000) //
     private String googleAccessToken;

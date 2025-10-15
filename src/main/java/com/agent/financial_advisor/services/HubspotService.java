@@ -71,13 +71,13 @@ public class HubspotService {
                             throw new IOException("Failed after token refresh. Code: " + retryResponse.code() +
                                     ", Body: " + errorBody);
                         }
-                        after = processResponse(retryResponse, allContacts);
+                        after = processResponse(retryResponse, allContacts, user);
                     }
                 } else if (!response.isSuccessful()) {
                     String errorBody = response.body() != null ? response.body().string() : "No error body";
                     throw new IOException("HubSpot API error. Code: " + response.code() + ", Body: " + errorBody);
                 } else {
-                    after = processResponse(response, allContacts);
+                    after = processResponse(response, allContacts, user);
                     tokenRefreshed = false; // Reset for next iteration
                 }
             }
@@ -161,18 +161,6 @@ public class HubspotService {
 
         String jsonBody = objectMapper.writerWithDefaultPrettyPrinter().writeValueAsString(searchRequest);
 
-        // 🪵 --- LOGGING SECTION ---
-        System.out.println("========== HubSpot Search Request ==========");
-        System.out.println("➡️  URL: " + url);
-        System.out.println("➡️  Method: POST");
-        System.out.println("➡️  Headers:");
-        System.out.println("   Authorization: Bearer [REDACTED]");
-        System.out.println("   Content-Type: application/json");
-        System.out.println("➡️  Request Body:");
-        System.out.println(jsonBody);
-        System.out.println("============================================");
-        // ---------------------------------------------
-
         RequestBody body = RequestBody.create(
                 jsonBody,
                 MediaType.parse("application/json; charset=utf-8")
@@ -189,12 +177,6 @@ public class HubspotService {
         try (Response response = httpClient.newCall(request).execute()) {
 
             String responseBody = response.body() != null ? response.body().string() : "No response body";
-
-            // 🪵 log response
-            System.out.println("========== HubSpot Search Response ==========");
-            System.out.println("⬅️  Status Code: " + response.code());
-            System.out.println("⬅️  Body: " + responseBody);
-            System.out.println("=============================================");
 
             // 🔁 Handle expired token once
             if (response.code() == 401 && !tokenRefreshed) {
@@ -415,13 +397,14 @@ public class HubspotService {
         }
     }
 
-    private String processResponse(Response response, List<JsonNode> allContacts) throws IOException {
+    private String processResponse(Response response, List<JsonNode> allContacts, User user) throws IOException {
         String responseBody = response.body().string();
         JsonNode root = objectMapper.readTree(responseBody);
 
         JsonNode results = root.get("results");
         if (results != null && results.isArray()) {
             for (JsonNode contact : results) {
+                ((ObjectNode) contact).set("notes", objectMapper.valueToTree(getNotesForContact(user, contact.get("id").asText())));
                 allContacts.add(contact);
             }
         }
@@ -475,6 +458,40 @@ public class HubspotService {
 
             System.out.println("Access token refreshed successfully");
             return user;
+        }
+    }
+    private List<JsonNode> getNotesForContact(User user, String contactId) throws IOException {
+        List<JsonNode> notes = new ArrayList<>();
+
+        String assocUrl = HUBSPOT_API_BASE + "/crm/v4/objects/contacts/" + contactId + "/associations/notes";
+        Request assocRequest = new Request.Builder()
+                .url(assocUrl)
+                .header("Authorization", "Bearer " + user.getHubspotAccessToken())
+                .build();
+
+        try (Response assocResponse = httpClient.newCall(assocRequest).execute()) {
+            if (!assocResponse.isSuccessful()) return notes;
+
+            JsonNode assocRoot = objectMapper.readTree(assocResponse.body().string());
+            for (JsonNode assoc : assocRoot.get("results")) {
+                String noteId = assoc.get("toObjectId").asText();
+                notes.add(getNoteById(user, noteId));
+            }
+        }
+
+        return notes;
+    }
+
+    private JsonNode getNoteById(User user, String noteId) throws IOException {
+        String noteUrl = HUBSPOT_API_BASE + "/crm/v3/objects/notes/" + noteId + "?properties=hs_note_body,hs_timestamp";
+        Request noteRequest = new Request.Builder()
+                .url(noteUrl)
+                .header("Authorization", "Bearer " + user.getHubspotAccessToken())
+                .build();
+
+        try (Response noteResponse = httpClient.newCall(noteRequest).execute()) {
+            if (!noteResponse.isSuccessful()) return null;
+            return objectMapper.readTree(noteResponse.body().string()).get("properties");
         }
     }
 }
