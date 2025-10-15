@@ -33,12 +33,16 @@ public class GmailService {
                 .build();
     }
 
+    // Update the listMessages method in GmailService.java
+
     public List<Message> listMessages(User user, int maxResults) throws Exception {
         Gmail service = getGmailService(user);
+
+        // ✅ FIX: Only fetch inbox emails, exclude sent emails
         ListMessagesResponse response = service.users().messages()
                 .list("me")
                 .setMaxResults((long) maxResults)
-                .setQ("in:inbox OR in:sent")
+                .setQ("in:inbox -from:me")  // Only inbox, exclude emails from the user
                 .execute();
 
         List<Message> messages = new ArrayList<>();

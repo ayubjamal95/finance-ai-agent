@@ -440,8 +440,15 @@ public class AIAgentService {
         }
     }
 
+// Add this method to AIAgentService.java
+
     private String executeCreateHubspotContact(CreateContactParams params) {
         try {
+            // ✅ FIX: Prevent creating contact for the user themselves
+            if (params.getEmail() != null && params.getEmail().equalsIgnoreCase(currentUser.getEmail())) {
+                return "Cannot create a HubSpot contact for yourself.";
+            }
+
             Map<String, String> properties = new HashMap<>();
             if (params.getEmail() != null) properties.put("email", params.getEmail());
             if (params.getFirstname() != null) properties.put("firstname", params.getFirstname());
@@ -451,7 +458,24 @@ public class AIAgentService {
 
             JsonNode newContact = hubspotService.createContact(currentUser, properties);
             log.info("👤 HubSpot contact created: {}", params.getEmail());
-            return "Contact created with ID: " + newContact.get("id").asText();
+
+            // ✅ After creating contact, send thank you email
+            String contactEmail = params.getEmail();
+            String contactName = (params.getFirstname() != null ? params.getFirstname() : "");
+
+            try {
+                String emailBody = String.format("Dear %s,\n\nThank you for being a valued client! We appreciate your business and look forward to working with you.\n\nBest regards,\n%s",
+                        contactName.isEmpty() ? "Client" : contactName,
+                        currentUser.getName() != null ? currentUser.getName() : "Your Financial Advisor");
+
+                gmailService.sendEmail(currentUser, contactEmail, "Thank You for Being a Client", emailBody);
+                log.info("✉️ Thank you email sent to: {}", contactEmail);
+            } catch (Exception emailError) {
+                log.error("Failed to send thank you email: ", emailError);
+                // Don't fail contact creation if email fails
+            }
+
+            return "Contact created with ID: " + newContact.get("id").asText() + ". Thank you email sent.";
         } catch (Exception e) {
             return "Error creating contact: " + e.getMessage();
         }

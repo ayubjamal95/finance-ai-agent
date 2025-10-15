@@ -4,6 +4,7 @@ import com.agent.financial_advisor.model.User;
 import com.agent.financial_advisor.repository.UserRepository;
 import com.google.api.services.calendar.model.Event;
 import com.google.api.services.gmail.model.Message;
+import com.google.api.services.gmail.model.MessagePartHeader;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
@@ -43,8 +44,11 @@ public class ProactiveMonitoringService {
 
                 for (Message message : messages) {
                     if (!userProcessed.contains(message.getId())) {
-                        log.info("📧 New email detected for user: {}", user.getEmail());
-                        aiAgentService.processIncomingEmail(user, message);
+                        // ✅ FIX: Only process RECEIVED emails, not SENT emails
+                        if (isReceivedEmail(message, user.getEmail())) {
+                            log.info("📧 New email detected for user: {}", user.getEmail());
+                            aiAgentService.processIncomingEmail(user, message);
+                        }
                         userProcessed.add(message.getId());
                     }
                 }
@@ -59,6 +63,30 @@ public class ProactiveMonitoringService {
                 log.error("❌ Error monitoring emails for user {}: ", user.getEmail(), e);
             }
         }
+    }
+
+    /**
+     * Check if the email was received (not sent by the user)
+     */
+    private boolean isReceivedEmail(Message message, String userEmail) {
+        for (MessagePartHeader header : message.getPayload().getHeaders()) {
+            if (header.getName().equalsIgnoreCase("From")) {
+                String fromEmail = extractEmail(header.getValue());
+                // If the "From" email is the user's email, it's a SENT email
+                return !fromEmail.equalsIgnoreCase(userEmail);
+            }
+        }
+        return true; // Default to processing if we can't determine
+    }
+
+    /**
+     * Extract email address from "From" header
+     */
+    private String extractEmail(String from) {
+        if (from.contains("<")) {
+            return from.substring(from.indexOf("<") + 1, from.indexOf(">"));
+        }
+        return from.trim();
     }
 
     @Scheduled(fixedDelay = 120000) // 2 minutes
